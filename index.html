@@ -4,7 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Outreach Tracker · Orchard Talent</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script>
+(function() {
+  var urls = [
+    "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js",
+    "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js",
+    "https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"
+  ];
+  var idx = 0;
+  function tryLoad() {
+    if (idx >= urls.length) { document.getElementById("msalError").style.display="block"; return; }
+    var s = document.createElement("script");
+    s.src = urls[idx++];
+    s.onload = function() { console.log("MSAL loaded from " + s.src); };
+    s.onerror = function() { console.warn("MSAL failed from " + s.src); tryLoad(); };
+    document.head.appendChild(s);
+  }
+  tryLoad();
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -117,6 +135,9 @@ tr:hover td{background:#faf8f5}
 </style>
 </head>
 <body>
+<div id="msalError" style="display:none;background:#fde8e8;color:#9b1c1c;padding:16px 24px;font-family:monospace;font-size:12px;border-bottom:1px solid #f8c0c0;">
+  ⚠ Could not load Microsoft auth library. Please check your internet connection and refresh.
+</div>
 <div class="wrap">
   <div class="masthead">
     <div>
