@@ -418,19 +418,17 @@ function processMessages(msgs) {
     const hasBrief = evts.some(e=>e.dir==="brief");
     const onlyBriefSent = evts.every(e=>e.dir==="brief"||e.dir==="sent");
 
-    const hasSent = evts.some(e=>e.dir==="sent"||e.dir==="brief");
-    const onlyBriefSent = evts.every(e=>e.dir==="brief"||e.dir==="sent") && hasBrief && !hasRecv;
-    // Needs Your Reply = they replied last AND we haven't sent anything after their reply
     const lastSent = [...evts].reverse().find(e=>e.dir==="sent"||e.dir==="brief");
     const lastRecv = [...evts].reverse().find(e=>e.dir==="received");
-    const theyReplyedLast = lastRecv && (!lastSent || lastRecv.date > lastSent.date);
+    const briefOnly = hasBrief && !hasRecv && evts.every(e=>e.dir==="brief"||e.dir==="sent");
+    const theyRepliedLast = lastRecv && (!lastSent || lastRecv.date > lastSent.date);
 
-    if (bounced.has(key))             map[key].status="Bounced";
-    else if (hasRecv && hasBrief)     map[key].status="Candidate";
-    else if (onlyBriefSent)           map[key].status="Brief Sent";
-    else if (theyReplyedLast)         map[key].status="Needs Your Reply";
-    else if (hasRecv)                 map[key].status="Replied";
-    else                              map[key].status="No Reply";
+    if (bounced.has(key))         map[key].status="Bounced";
+    else if (hasRecv && hasBrief) map[key].status="Candidate";
+    else if (briefOnly)           map[key].status="Brief Sent";
+    else if (theyRepliedLast)     map[key].status="Needs Your Reply";
+    else if (hasRecv)             map[key].status="Replied";
+    else                          map[key].status="No Reply";
   }
 
   return Object.values(map).sort((a,b) => {
