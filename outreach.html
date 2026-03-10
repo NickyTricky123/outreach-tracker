@@ -252,7 +252,7 @@ const fmtDate = d => { if(!d) return "—";
 
 async function getToken() {
   try { return (await msal_.acquireTokenSilent({scopes:SCOPES,account})).accessToken; }
-  catch(e) { return (await msal_.acquireTokenPopup({scopes:SCOPES})).accessToken; }
+  catch(e) { await msal_.acquireTokenRedirect({scopes:SCOPES}); }
 }
 
 async function gGet(url, token) {
@@ -262,7 +262,7 @@ async function gGet(url, token) {
 }
 
 document.getElementById("signinBtn").addEventListener("click", async () => {
-  try { const r = await msal_.loginPopup({scopes:SCOPES}); account=r.account; onSignedIn(); }
+  try { await msal_.loginRedirect({scopes:SCOPES}); }
   catch(e) { alert("Sign-in failed: "+e.message); }
 });
 
