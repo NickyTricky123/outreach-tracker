@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outreach Tracker · Orchard Talent</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f4ef;--surface:#fff;--border:#e5e0d8;--border-strong:#c8c0b4;
+  --text:#1a1814;--muted:#8a8278;--accent:#c84b2f;--accent-soft:#f5e8e4;
+  --green:#2d6a4f;--green-soft:#e8f4ee;--amber:#92600a;--amber-soft:#fdf3e0;
+  --red:#9b1c1c;--red-soft:#fde8e8;--blue:#1e40af;--blue-soft:#eff6ff;
+}
+body{background:var(--bg);font-family:'Geist Mono',monospace;color:var(--text);min-height:100vh}
+.wrap{padding:40px 28px 80px;max-width:960px;margin:0 auto}
+.masthead{padding-bottom:24px;border-bottom:1px solid var(--border-strong);display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px}
+.masthead h1{font-family:'Instrument Serif',serif;font-size:36px;font-weight:400;letter-spacing:-0.5px;line-height:1;margin-bottom:6px}
+.masthead h1 em{font-style:italic;color:var(--accent)}
+.masthead-sub{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+.masthead-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.user-chip{font-size:10px;color:var(--muted);letter-spacing:.5px}
+.user-chip strong{color:var(--text)}
+.sign-out-btn{font-size:9px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:2px;padding:3px 8px;cursor:pointer;font-family:'Geist Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all .12s}
+.sign-out-btn:hover{border-color:var(--accent);color:var(--accent)}
+.signin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;text-align:center}
+.signin-icon{font-size:48px;margin-bottom:8px}
+.signin-title{font-family:'Instrument Serif',serif;font-size:28px;font-weight:400}
+.signin-title em{font-style:italic;color:var(--accent)}
+.signin-sub{font-size:11px;color:var(--muted);letter-spacing:1px;line-height:1.8;max-width:420px}
+.signin-btn{display:flex;align-items:center;gap:10px;background:var(--text);color:var(--bg);border:none;padding:14px 28px;border-radius:3px;font-family:'Geist Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .15s;margin-top:8px}
+.signin-btn:hover{background:var(--accent)}
+.ms-logo{width:18px;height:18px}
+.api-prompt{background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.api-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+.api-input{flex:1;min-width:260px;padding:7px 12px;border:1px solid var(--border);border-radius:3px;font-family:'Geist Mono',monospace;font-size:11px;background:var(--bg);color:var(--text)}
+.api-input:focus{outline:none;border-color:var(--accent)}
+.api-note{font-size:9px;color:var(--muted);width:100%}
+.folder-panel{background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;overflow:hidden;margin-bottom:24px}
+.folder-head{padding:14px 20px;border-bottom:1px solid var(--border);background:#faf8f5;display:flex;align-items:center;justify-content:space-between}
+.folder-head-title{font-family:'Instrument Serif',serif;font-size:16px}
+.folder-head-hint{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.folder-list{max-height:300px;overflow-y:auto}
+.folder-item{padding:11px 20px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .1s;font-size:12px}
+.folder-item:last-child{border-bottom:none}
+.folder-item:hover{background:#faf8f5}
+.folder-item.selected{background:var(--accent-soft);border-left:3px solid var(--accent)}
+.folder-icon{font-size:13px;flex-shrink:0;color:var(--muted)}
+.folder-name{flex:1;font-weight:500}
+.folder-count{font-size:10px;color:var(--muted)}
+.folder-indent{padding-left:36px}
+.date-row{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#faf8f5}
+.date-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.date-input{padding:6px 10px;border:1px solid var(--border);border-radius:3px;font-family:'Geist Mono',monospace;font-size:11px;background:var(--surface);color:var(--text)}
+.date-input:focus{outline:none;border-color:var(--accent)}
+.date-hint{font-size:9px;color:var(--muted)}
+.load-btn{display:inline-flex;align-items:center;gap:8px;background:var(--text);color:var(--bg);border:none;padding:10px 22px;border-radius:3px;font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.5px;transition:all .12s;margin-left:auto}
+.load-btn:disabled{background:var(--border-strong);cursor:not-allowed}
+.load-btn:not(:disabled):hover{background:var(--accent)}
+.status-strip{padding:12px 16px;border-radius:4px;font-size:11px;display:flex;align-items:center;gap:10px;border:1px solid var(--border);background:var(--surface);margin-bottom:24px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-spin{background:var(--accent);animation:blink .8s infinite}
+.dot-ok{background:var(--green)}
+.dot-err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.status-msg{color:var(--muted);flex:1}
+.refresh-btn{font-size:9px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:2px;padding:3px 10px;cursor:pointer;font-family:'Geist Mono',monospace;letter-spacing:1px;text-transform:uppercase;transition:all .12s;white-space:nowrap}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+.stats-row{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--border-strong);border-radius:4px;overflow:hidden;margin-bottom:24px}
+.stat-cell{padding:18px 20px;border-right:1px solid var(--border);background:var(--surface)}
+.stat-cell:last-child{border-right:none}
+.stat-n{font-family:'Instrument Serif',serif;font-size:38px;line-height:1;margin-bottom:5px}
+.stat-l{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.ai-panel{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;background:var(--surface);overflow:hidden;margin-bottom:24px}
+.ai-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--accent-soft)}
+.ai-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600}
+.ai-meta{margin-left:auto;font-size:9px;color:var(--muted);letter-spacing:1px}
+.ai-body{padding:16px;font-size:12px;line-height:1.9;color:var(--text)}
+.table-panel{border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);overflow:hidden;margin-bottom:24px}
+.panel-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#faf8f5}
+.panel-title{font-family:'Instrument Serif',serif;font-size:16px}
+.count-chip{font-size:10px;padding:3px 9px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);color:var(--muted);background:var(--surface)}
+.filter-bar{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fb{padding:4px 12px;border-radius:2px;border:1px solid var(--border);background:transparent;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:all .12s}
+.fb:hover{border-color:var(--border-strong);color:var(--text)}
+.fb.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.fb.on-green{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+.fb.on-amber{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+.fb.on-blue{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+.t-wrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:9px 14px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);background:#faf8f5;position:sticky;top:0;z-index:1;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf8f5}
+.td-email{color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.td-name{color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-subj{color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.td-date{color:var(--muted);font-size:10px;white-space:nowrap}
+.td-count{font-family:'Instrument Serif',serif;font-size:18px;color:var(--text);text-align:center}
+.td-count.hot{color:var(--accent)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:2px;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:600;border:1px solid transparent;transition:all .12s;white-space:nowrap;cursor:pointer;font-family:'Geist Mono',monospace}
+.badge-no{background:var(--amber-soft);color:var(--amber);border-color:#f0d090}
+.badge-no:hover{background:var(--green-soft);color:var(--green)}
+.badge-yes{background:var(--green-soft);color:var(--green);border-color:#b0dcc0}
+.badge-yes:hover{background:var(--amber-soft);color:var(--amber)}
+.badge-bounce{background:var(--red-soft);color:var(--red);border-color:#f8c0c0;cursor:default}
+.badge-needs{background:var(--blue-soft);color:var(--blue);border-color:#bfdbfe}
+.badge-needs:hover{background:var(--green-soft);color:var(--green)}
+.badge-brief{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe;cursor:default}
+.badge-candidate{background:#fdf4ff;color:#7e22ce;border-color:#e9d5ff;cursor:default}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;background:var(--text);color:var(--bg);border:none;padding:12px 22px;border-radius:3px;font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.5px;transition:all .12s;margin:16px}
+.dl-btn:hover{background:var(--accent)}
+.hidden{display:none}
+.empty{padding:48px;text-align:center;color:var(--border-strong);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="msalError" style="display:none;background:#fde8e8;color:#9b1c1c;padding:16px 24px;font-family:monospace;font-size:12px;border-bottom:1px solid #f8c0c0;">
+  ⚠ Could not load Microsoft auth library. Please check your internet connection and refresh.
+</div>
+<div class="wrap">
+  <div class="masthead">
+    <div>
+      <h1>Outreach <em>Tracker</em></h1>
+      <div class="masthead-sub">Orchard Talent · Email Intelligence</div>
+    </div>
+    <div class="masthead-right" id="mastheadRight"></div>
+  </div>
+
+  <div id="signinScreen" class="signin-screen">
+    <div class="signin-icon">📬</div>
+    <div class="signin-title">Connect your <em>Outlook</em></div>
+    <div class="signin-sub">Sign in with your Microsoft account to read your project folders directly — no exports, no manual steps.</div>
+    <button class="signin-btn" id="signinBtn">
+      <svg class="ms-logo" viewBox="0 0 21 21" fill="none">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Reads mail only · No data stored · Signs out any time</div>
+  </div>
+
+  <div id="appScreen" class="hidden">
+    <div class="api-prompt">
+      <span class="api-label">Anthropic API Key</span>
+      <input class="api-input" type="password" id="apiKey" placeholder="sk-ant-… (optional — for AI briefing)"/>
+      <span class="api-note">Only used for the AI summary. Never stored.</span>
+    </div>
+
+    <div class="folder-panel">
+      <div class="folder-head">
+        <span class="folder-head-title">Select Project Folder</span>
+        <span class="folder-head-hint" id="folderHint">Loading folders…</span>
+      </div>
+      <div class="folder-list" id="folderList"><div class="empty">Loading your mailbox…</div></div>
+      <div class="date-row">
+        <span class="date-label">Look back</span>
+        <select class="date-input" id="lookback">
+          <option value="14">2 weeks</option>
+          <option value="30">1 month</option>
+          <option value="60">2 months</option>
+          <option value="90">3 months</option>
+          <option value="180">6 months</option>
+          <option value="365">1 year</option>
+        </select>
+        <span class="date-hint">Emails older than this are ignored</span>
+        <button class="load-btn" id="loadBtn" disabled>Load Folder →</button>
+      </div>
+    </div>
+
+    <div class="status-strip hidden" id="statusStrip">
+      <div class="dot dot-spin" id="statusDot"></div>
+      <span class="status-msg" id="statusMsg"></span>
+      <button class="refresh-btn hidden" id="refreshBtn">↺ Refresh</button>
+    </div>
+
+    <div class="stats-row hidden" id="statsRow">
+      <div class="stat-cell"><div class="stat-n" id="statTotal" style="color:var(--text)">0</div><div class="stat-l">Contacts</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statNeedsReply" style="color:var(--blue)">0</div><div class="stat-l">Needs Your Reply</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statNoReply" style="color:var(--amber)">0</div><div class="stat-l">No Reply</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statBriefSent" style="color:#6b21a8">0</div><div class="stat-l">Brief Sent</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statCandidate" style="color:#7e22ce">0</div><div class="stat-l">Candidate</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statReplied" style="color:var(--green)">0</div><div class="stat-l">Replied</div></div>
+      <div class="stat-cell"><div class="stat-n" id="statBounced" style="color:var(--red)">0</div><div class="stat-l">Bounced</div></div>
+    </div>
+
+    <div class="ai-panel hidden" id="aiPanel">
+      <div class="ai-head">
+        <span class="ai-label">AI Briefing</span>
+        <span class="ai-meta" id="aiMeta"></span>
+      </div>
+      <div class="ai-body" id="aiBody"></div>
+    </div>
+
+    <div class="table-panel hidden" id="tablePanel">
+      <div class="panel-head">
+        <span class="panel-title">Contact List</span>
+        <span class="count-chip" id="shownCount">0 shown</span>
+      </div>
+      <div class="filter-bar">
+        <button class="fb on" data-filter="all" id="fb-all">All</button>
+        <button class="fb" data-filter="needs-reply" id="fb-needs-reply">Needs Your Reply</button>
+        <button class="fb" data-filter="no-reply" id="fb-no-reply">No Reply</button>
+        <button class="fb" data-filter="replied" id="fb-replied">Replied</button>
+        <button class="fb" data-filter="bounced" id="fb-bounced">Bounced</button>
+        <button class="fb" data-filter="brief-sent" id="fb-brief-sent">Brief Sent</button>
+        <button class="fb" data-filter="candidate" id="fb-candidate">Candidate</button>
+        <button class="fb" data-filter="multi" id="fb-multi">Multi-Touch</button>
+        <span style="margin-left:auto;font-size:9px;color:var(--border-strong);letter-spacing:.5px">Click badge to toggle status</span>
+      </div>
+      <div class="t-wrap">
+        <table>
+          <thead><tr>
+            <th>Email</th><th>Name</th><th style="text-align:center">Emails</th>
+            <th>Last Subject</th><th>Last Contact</th><th>Status</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <button class="dl-btn" id="dlBtn">↓ Download Tracker (.xlsx)</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const CLIENT_ID = "4238c43f-55c4-48cb-91c7-1136cc804482";
+const INTERNAL  = "orchardtalent.com.au";
+const NOISE     = ["linkedin.com","idibu.com","microsoft.com","office365reports","mailer-daemon",
+                   "postmaster","noreply","no-reply","donotreply","automatednotification","calendar-notification"];
+
+const msalCfg = {
+  auth: { clientId: CLIENT_ID, authority: "https://login.microsoftonline.com/9d000422-0af5-49f6-9439-cadb82e9dbd3",
+          redirectUri: "https://nickytricky123.github.io/outreach-tracker/outreach.html" },
+  cache: { cacheLocation: "sessionStorage" }
+};
+const msal_ = new msal.PublicClientApplication(msalCfg);
+const SCOPES = ["Mail.Read","User.Read"];
+
+let account = null, contacts = [], overrides = {}, currentFilter = "all";
+let selectedFolderId = null, selectedFolderName = "";
+
+const isInternal = a => !a || a.toLowerCase().includes(INTERNAL);
+const isNoise    = a => NOISE.some(n => (a||"").toLowerCase().includes(n));
+const isBrief    = s => { const l=(s||"").toLowerCase(); return l.includes("executive brief")||l.includes("exec brief"); };
+const isBounce   = s => { const l=(s||"").toLowerCase();
+  return l.startsWith("undeliverable")||l.startsWith("delivery failed")||
+         l.startsWith("delivery status")||l.startsWith("mail delivery")||
+         l.startsWith("failure notice")||l.includes("undeliverable:"); };
+const fmtDate = d => { if(!d) return "—";
+  return new Date(d).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"2-digit"}); };
+
+async function getToken() {
+  try { return (await msal_.acquireTokenSilent({scopes:SCOPES,account})).accessToken; }
+  catch(e) { await msal_.acquireTokenRedirect({scopes:SCOPES}); }
+}
+
+async function gGet(url, token) {
+  const r = await fetch(url, {headers:{Authorization:"Bearer "+token}});
+  if (!r.ok) throw new Error("Graph "+r.status+": "+await r.text());
+  return r.json();
+}
+
+document.getElementById("signinBtn").addEventListener("click", async () => {
+  try { await msal_.loginRedirect({scopes:SCOPES}); }
+  catch(e) { alert("Sign-in failed: "+e.message); }
+});
+
+async function onSignedIn() {
+  document.getElementById("signinScreen").classList.add("hidden");
+  document.getElementById("appScreen").classList.remove("hidden");
+  document.getElementById("mastheadRight").innerHTML =
+    `<div class="user-chip">Signed in as <strong>${account.username}</strong></div>
+     <button class="sign-out-btn" id="signOutBtn">Sign out</button>`;
+  document.getElementById("signOutBtn").addEventListener("click",
+    () => { msal_.logoutPopup(); location.reload(); });
+  await loadFolders();
+}
+
+async function loadFolders() {
+  const token = await getToken();
+  document.getElementById("folderHint").textContent = "Loading…";
+  try {
+    const data = await gGet("https://graph.microsoft.com/v1.0/me/mailFolders?$top=50", token);
+    const folders = data.value || [];
+    document.getElementById("folderHint").textContent = "Pick a folder to analyse";
+    const list = document.getElementById("folderList");
+    list.innerHTML = "";
+    for (const f of folders) {
+      list.appendChild(makeFolderEl(f, false));
+      if (f.childFolderCount > 0) {
+        try {
+          const ch = await gGet(`https://graph.microsoft.com/v1.0/me/mailFolders/${f.id}/childFolders?$top=50`, token);
+          for (const cf of (ch.value||[])) list.appendChild(makeFolderEl(cf, true));
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    document.getElementById("folderList").innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+function makeFolderEl(f, indent) {
+  const el = document.createElement("div");
+  el.className = "folder-item"+(indent?" folder-indent":"");
+  el.dataset.id = f.id; el.dataset.name = f.displayName;
+  el.innerHTML = `<span class="folder-icon">${indent?"└":"📁"}</span>
+    <span class="folder-name">${f.displayName}</span>
+    <span class="folder-count">${f.totalItemCount??""} items</span>`;
+  el.addEventListener("click", () => {
+    selectedFolderId = f.id; selectedFolderName = f.displayName;
+    document.querySelectorAll(".folder-item").forEach(e => e.classList.toggle("selected", e.dataset.id===f.id));
+    document.getElementById("loadBtn").disabled = false;
+  });
+  return el;
+}
+
+document.getElementById("loadBtn").addEventListener("click", loadEmails);
+
+async function loadEmails() {
+  if (!selectedFolderId) return;
+  const days  = parseInt(document.getElementById("lookback").value);
+  const since = new Date(Date.now() - days*864e5).toISOString();
+  contacts = []; overrides = {};
+  ["statsRow","aiPanel","tablePanel"].forEach(id => document.getElementById(id).classList.add("hidden"));
+  setStatus("spin","Connecting to mailbox…");
+
+  try {
+    const token = await getToken();
+    const fields = "sender,toRecipients,subject,receivedDateTime,isDraft";
+    let url = `https://graph.microsoft.com/v1.0/me/mailFolders/${selectedFolderId}/messages`
+            + `?$top=100&$select=${fields}&$filter=receivedDateTime ge ${since}&$orderby=receivedDateTime asc`;
+    let all = [], page = 0;
+    while (url) {
+      page++;
+      setStatus("spin",`Fetching emails… (page ${page}, ${all.length} loaded)`);
+      const d = await gGet(url, token);
+      all = all.concat(d.value||[]);
+      url = d["@odata.nextLink"]||null;
+    }
+
+    setStatus("spin",`Processing ${all.length} emails…`);
+    contacts = processMessages(all);
+
+    ["statsRow","tablePanel"].forEach(id => document.getElementById(id).classList.remove("hidden"));
+    updateStats(); renderTable();
+    document.getElementById("refreshBtn").classList.remove("hidden");
+
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if (apiKey) {
+      setStatus("spin",`${contacts.length} contacts found — generating AI briefing…`);
+      const ai = await getAI(contacts, selectedFolderName, apiKey);
+      document.getElementById("aiMeta").textContent = selectedFolderName+" · last "+days+" days";
+      document.getElementById("aiBody").textContent = ai;
+      document.getElementById("aiPanel").classList.remove("hidden");
+    }
+
+    const nr=contacts.filter(c=>effective(c)==="Needs Your Reply").length;
+    const n=contacts.filter(c=>effective(c)==="No Reply").length;
+    const b=contacts.filter(c=>effective(c)==="Bounced").length;
+    setStatus("ok",`${contacts.length} contacts — ${nr} need your reply · ${n} no reply · ${b} bounced`);
+  } catch(e) {
+    setStatus("err","Error: "+e.message); console.error(e);
+  }
+}
+
+document.getElementById("refreshBtn").addEventListener("click", loadEmails);
+
+function processMessages(msgs) {
+  const map = {}, timeline = {}, bounced = new Set();
+  for (const msg of msgs) {
+    if (msg.isDraft) continue;
+    const subj     = (msg.subject||"").trim();
+    const date     = msg.receivedDateTime;
+    const fromAddr = (msg.sender?.emailAddress?.address||"").toLowerCase();
+    const fromName = msg.sender?.emailAddress?.name||"";
+    const toList   = (msg.toRecipients||[]).map(r=>(r.emailAddress?.address||"").toLowerCase()).filter(Boolean);
+
+    if (isBounce(subj)) {
+      const m = subj.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+      if (m) bounced.add(m[0].toLowerCase());
+      continue;
+    }
+
+    if (isInternal(fromAddr)) {
+      // Sent by us
+      for (const to of toList) {
+        if (isInternal(to)||isNoise(to)) continue;
+        if (!map[to]) map[to]={email:to,name:"",count:0,lastSubject:"",lastDate:null,status:"No Reply"};
+        map[to].count++;
+        map[to].lastSubject = subj;
+        if (!map[to].lastDate||date>map[to].lastDate) map[to].lastDate=date;
+        if (!timeline[to]) timeline[to]=[];
+        timeline[to].push({dir:isBrief(subj)?"brief":"sent",date});
+      }
+    } else {
+      // Received from external
+      if (isNoise(fromAddr)) continue;
+      if (!timeline[fromAddr]) timeline[fromAddr]=[];
+      timeline[fromAddr].push({dir:"received",date});
+      if (map[fromAddr]&&!map[fromAddr].name&&fromName&&!fromName.includes("@"))
+        map[fromAddr].name=fromName;
+    }
+  }
+
+  for (const key of Object.keys(map)) {
+    const evts = (timeline[key]||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const last = evts[evts.length-1];
+    const hasRecv = evts.some(e=>e.dir==="received");
+    const hasBrief = evts.some(e=>e.dir==="brief");
+    const onlyBriefSent = evts.every(e=>e.dir==="brief"||e.dir==="sent");
+
+    if (bounced.has(key))             map[key].status="Bounced";
+    else if (hasRecv && hasBrief && last.dir==="received") map[key].status="Candidate";
+    else if (hasRecv && hasBrief)     map[key].status="Candidate";
+    else if (hasBrief && onlyBriefSent) map[key].status="Brief Sent";
+    else if (last?.dir==="received")  map[key].status="Needs Your Reply";
+    else if (hasRecv)                 map[key].status="Replied";
+    else                              map[key].status="No Reply";
+  }
+
+  return Object.values(map).sort((a,b) => {
+    const o={"Needs Your Reply":0,"Candidate":1,"No Reply":2,"Brief Sent":3,"Replied":4,"Bounced":5};
+    const d=(o[a.status]||99)-(o[b.status]||99);
+    return d!==0?d:b.count-a.count;
+  });
+}
+
+async function getAI(ctcts, folder, apiKey) {
+  const nr = ctcts.filter(c=>c.status==="Needs Your Reply");
+  const no = ctcts.filter(c=>c.status==="No Reply");
+  const b  = ctcts.filter(c=>c.status==="Bounced");
+  const r  = ctcts.filter(c=>c.status==="Replied");
+  const nrList = nr.slice(0,8).map(c=>`- ${c.name||c.email} <${c.email}> | ${c.count} emails | last: "${c.lastSubject}"`).join("\n")||"None";
+  const noList = no.filter(c=>c.count>1).slice(0,6).map(c=>`- ${c.name||c.email} <${c.email}> | ${c.count} sent`).join("\n")||"None";
+  const prompt = "You are a recruitment coordinator at Orchard Talent.\n\nPROJECT: "+folder+
+    "\nSTATS: "+ctcts.length+" contacts | "+nr.length+" need your reply | "+no.length+" no reply | "+r.length+" replied | "+b.length+" bounced\n\n"+
+    "NEEDS YOUR REPLY:\n"+nrList+"\n\nTOP NO-REPLY:\n"+noList+"\n\nBOUNCED: "+(b.map(c=>c.email).join(", ")||"None")+
+    "\n\nWrite 2-3 sentences. Lead with who needs a reply from you (use names). Then key no-reply contacts. Mention bounces if any. Be specific. No bullets.";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":apiKey,
+               "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,messages:[{role:"user",content:prompt}]})
+    });
+    return (await res.json()).content?.[0]?.text||"Analysis unavailable.";
+  } catch(e) { return "AI briefing unavailable — check your API key."; }
+}
+
+const effective = c => overrides[c.email]||c.status;
+
+function renderTable() {
+  const filtered = contacts.filter(c => {
+    const s=effective(c);
+    if(currentFilter==="needs-reply") return s==="Needs Your Reply";
+    if(currentFilter==="no-reply")   return s==="No Reply";
+    if(currentFilter==="brief-sent") return s==="Brief Sent";
+    if(currentFilter==="candidate")  return s==="Candidate";
+    if(currentFilter==="replied")    return s==="Replied";
+    if(currentFilter==="bounced")    return s==="Bounced";
+    if(currentFilter==="multi")      return c.count>1;
+    return true;
+  });
+  document.getElementById("shownCount").textContent=filtered.length+" shown";
+  const tbody=document.getElementById("tableBody");
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="6" class="empty">No contacts in this view</td></tr>`;return;}
+  tbody.innerHTML=filtered.map(c=>{
+    const s=effective(c), esc=c.email.replace(/'/g,"\\'");
+    const badge = s==="Bounced"        ? `<span class="badge badge-bounce">⚠ Bounced</span>`
+                : s==="Replied"        ? `<button class="badge badge-yes" onclick="toggle('${esc}')">✓ Replied</button>`
+                : s==="Needs Your Reply" ? `<button class="badge badge-needs" onclick="toggle('${esc}')">↩ Needs Reply</button>`
+                : s==="Brief Sent"     ? `<span class="badge badge-brief">📄 Brief Sent</span>`
+                : s==="Candidate"      ? `<span class="badge badge-candidate">⭐ Candidate</span>`
+                :                       `<button class="badge badge-no" onclick="toggle('${esc}')">○ No Reply</button>`;
+    return `<tr>
+      <td><div class="td-email" title="${c.email}">${c.email}</div></td>
+      <td><div class="td-name">${c.name||"—"}</div></td>
+      <td><div class="td-count${c.count>2?" hot":""}">${c.count}</div></td>
+      <td><div class="td-subj" title="${c.lastSubject||""}">${c.lastSubject||"—"}</div></td>
+      <td><div class="td-date">${fmtDate(c.lastDate)}</div></td>
+      <td>${badge}</td></tr>`;
+  }).join("");
+  updateStats();
+}
+
+function toggle(email) {
+  const cur=overrides[email]||contacts.find(c=>c.email===email)?.status;
+  if(cur==="Bounced") return;
+  overrides[email]=cur==="No Reply"?"Replied":cur==="Replied"?"No Reply":cur==="Needs Your Reply"?"Replied":"No Reply";
+  renderTable();
+}
+window.toggle=toggle;
+
+function updateStats() {
+  const nr=contacts.filter(c=>effective(c)==="Needs Your Reply").length;
+  const n=contacts.filter(c=>effective(c)==="No Reply").length;
+  const r=contacts.filter(c=>effective(c)==="Replied").length;
+  const b=contacts.filter(c=>effective(c)==="Bounced").length;
+  const bs=contacts.filter(c=>effective(c)==="Brief Sent").length;
+  const ca=contacts.filter(c=>effective(c)==="Candidate").length;
+  document.getElementById("statTotal").textContent=contacts.length;
+  document.getElementById("statNeedsReply").textContent=nr;
+  document.getElementById("statNoReply").textContent=n;
+  document.getElementById("statBriefSent").textContent=bs;
+  document.getElementById("statCandidate").textContent=ca;
+  document.getElementById("statReplied").textContent=r;
+  document.getElementById("statBounced").textContent=b;
+  document.getElementById("fb-all").textContent=`All (${contacts.length})`;
+  document.getElementById("fb-needs-reply").textContent=`Needs Your Reply (${nr})`;
+  document.getElementById("fb-no-reply").textContent=`No Reply (${n})`;
+  document.getElementById("fb-brief-sent").textContent=`Brief Sent (${bs})`;
+  document.getElementById("fb-candidate").textContent=`Candidate (${ca})`;
+  document.getElementById("fb-replied").textContent=`Replied (${r})`;
+  document.getElementById("fb-bounced").textContent=`Bounced (${b})`;
+  document.getElementById("fb-multi").textContent=`Multi-Touch (${contacts.filter(c=>c.count>1).length})`;
+}
+
+function setStatus(type,msg) {
+  const strip=document.getElementById("statusStrip"),dot=document.getElementById("statusDot");
+  strip.classList.remove("hidden");
+  dot.className="dot "+(type==="spin"?"dot-spin":type==="ok"?"dot-ok":"dot-err");
+  document.getElementById("statusMsg").textContent=msg;
+}
+
+document.getElementById("dlBtn").addEventListener("click",()=>{
+  const wb=XLSX.utils.book_new();
+  const rows=[["Email","Name","Emails","Status","Last Subject","Last Contact","Notes"],
+    ...contacts.map(c=>[c.email,c.name||"",c.count,effective(c),c.lastSubject||"",fmtDate(c.lastDate),""])];
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[32,22,8,16,55,14,28].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,selectedFolderName||"Outreach");
+  const bytes=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:(selectedFolderName||"Outreach")+"_Tracker.xlsx"});
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+document.querySelectorAll(".fb").forEach(btn=>btn.addEventListener("click",()=>{
+  currentFilter=btn.dataset.filter;
+  document.querySelectorAll(".fb").forEach(b=>b.className="fb");
+  btn.classList.add(currentFilter==="replied"?"on-green":currentFilter==="needs-reply"?"on-blue":currentFilter==="multi"?"on-amber":"on");
+  renderTable();
+}));
+
+msal_.handleRedirectPromise().then(r=>{
+  if(r?.account){account=r.account;onSignedIn();}
+  else{const a=msal_.getAllAccounts();if(a.length>0){account=a[0];onSignedIn();}}
+}).catch(console.error);
+</script>
+</body>
+</html>
